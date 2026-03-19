@@ -2,22 +2,54 @@
 
 ## API-Grundsaetze
 
-- REST-nahe Endpunkte mit klaren Ressourcen.
-- Konsistente Fehlerantworten.
-- Idempotente Updates, wo moeglich.
+- POST fuer alle schreibenden Operationen (create, update, delete), GET fuer Lesezugriffe.
+- Konsistente JSON-Antworten mit `success`, `data`, `msg`.
+- Idempotente Updates: nur geaenderte Felder muessen gesendet werden.
 
-## Initiale Endpunkte
+## Implementierte Endpunkte
 
-1. `GET /todo/lists`
-2. `POST /todo/lists`
-3. `PATCH /todo/lists/{id}`
-4. `GET /todo/lists/{id}/items`
-5. `POST /todo/lists/{id}/items`
-6. `PATCH /todo/items/{id}`
-7. `DELETE /todo/items/{id}`
+### Listen (`todo.list` Scope)
+
+| Methode | URL                              | Beschreibung           |
+|---------|----------------------------------|------------------------|
+| GET     | `/todo/lists`                    | Alle aktiven Listen    |
+| POST    | `/todo/lists`                    | Neue Liste anlegen     |
+| POST    | `/todo/lists/{id}/update`        | Liste aktualisieren    |
+| POST    | `/todo/lists/{id}/delete`        | Liste weich loeschen   |
+
+### Aufgaben (`todo.item` Scope)
+
+| Methode | URL                                    | Beschreibung              |
+|---------|----------------------------------------|---------------------------|
+| GET     | `/todo/lists/{list_id}/items`          | Aufgaben einer Liste      |
+| POST    | `/todo/lists/{list_id}/items`          | Neue Aufgabe anlegen      |
+| POST    | `/todo/items/{id}/update`              | Aufgabe aktualisieren     |
+| POST    | `/todo/items/{id}/delete`              | Aufgabe weich loeschen    |
+
+### Tags (`todo.tag` Scope)
+
+| Methode | URL                       | Beschreibung        |
+|---------|---------------------------|---------------------|
+| GET     | `/todo/tags`              | Alle Tags           |
+| POST    | `/todo/tags`              | Neuen Tag anlegen   |
+| POST    | `/todo/tags/{id}/update`  | Tag aktualisieren   |
+| POST    | `/todo/tags/{id}/delete`  | Tag loeschen        |
 
 ## Entscheidungen
 
-- Sortierung und Filter als Query-Parameter.
-- Paging von Anfang an fuer Listen und Items.
-- API-Versionierung vorbereiten (`/api/v1/...`).
+- Aktions-URLs (`/update`, `/delete`) statt HTTP-Verben PATCH/DELETE fuer Konsistenz mit dem bestehenden Framework-Routing-Stil.
+- Scope-basierte Zugriffskontrolle pro Ressourcentyp.
+- Soft-Delete fuer Listen und Aufgaben (deleted_at), Hard-Delete nur fuer Tags.
+- Status update auf `done` setzt `completed_at` automatisch, alle anderen Status resetten es.
+- `completed_at` wird serverseitig gesetzt, niemals vom Client.
+
+## Scope-Initialisierung (SQL)
+
+```sql
+insert ignore into route_scopes (`scope`) values ('todo.list'), ('todo.item'), ('todo.tag');
+insert ignore into route_scopes_permissions (`scope`, `group`, `allowed`)
+    values ('todo.list', '_default_', 1),
+           ('todo.item', '_default_', 1),
+           ('todo.tag',  '_default_', 1);
+```
+

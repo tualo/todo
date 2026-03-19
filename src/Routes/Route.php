@@ -56,10 +56,6 @@ class Route extends \Tualo\Office\Basic\RouteWrapper
                 } catch (\Exception $e) {
                     TualoApplication::result('msg', $e->getMessage());
                 }
-
-
-                // 
-                // [] = keine zusätzlichen Rechte erforderlich, außer gültigem Token
             },
             ['get'], // get erlauben
             true, // true = geschützte Route, nur mit gültigem Token oder aktiver session erreichbar
