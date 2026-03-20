@@ -5,7 +5,7 @@ namespace Tualo\Office\ToDo\Routes;
 use Tualo\Office\Basic\TualoApplication;
 use Tualo\Office\Basic\Route as R;
 
-class ItemRoute
+class ItemRoute extends \Tualo\Office\Basic\RouteWrapper
 {
     const FieldsCreate = [
         '_dc'            => ['required' => false, 'type' => 'string', 'minlength' => 0,  'maxlength' => 10000],

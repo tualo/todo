@@ -1,0 +1,371 @@
+doctype html
+html(lang='de')
+  head
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    title=title
+    style.
+      :root {
+        --bg-a: #f0efe8;
+        --bg-b: #d7e6ef;
+        --card: #ffffff;
+        --ink: #14222e;
+        --muted: #5b6f7e;
+        --line: #d6dde2;
+        --accent: #0f7a6b;
+        --accent-ink: #ffffff;
+        --done: #7c8b95;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 20% 0%, var(--bg-b) 0%, var(--bg-a) 48%, #ece9df 100%);
+      }
+      .todo-shell {
+        max-width: 960px;
+        margin: 24px auto;
+        padding: 16px;
+      }
+      .todo-header {
+        margin-bottom: 16px;
+      }
+      .todo-header h1 {
+        margin: 0;
+        font-size: 34px;
+        letter-spacing: 0.02em;
+      }
+      .todo-header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+      .todo-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 16px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 8px 24px rgba(21, 42, 57, 0.08);
+      }
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      input, select, button {
+        font: inherit;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+      }
+      button {
+        background: var(--accent);
+        color: var(--accent-ink);
+        border-color: var(--accent);
+        cursor: pointer;
+      }
+      button.ghost {
+        background: #ffffff;
+        color: var(--ink);
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .row > * { flex: 1; }
+      #items {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        padding: 10px;
+        border-radius: 10px;
+        background: #fcfdfd;
+      }
+      .item.done .title {
+        text-decoration: line-through;
+        color: var(--done);
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .status {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .empty {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .flash {
+        min-height: 20px;
+        font-size: 13px;
+        color: #8a2e2e;
+      }
+      @media (max-width: 840px) {
+        .todo-grid { grid-template-columns: 1fr; }
+      }
+    each val in stylesheets
+      link(rel='stylesheet', type='text/css', href=val.filename, id=val.key)
+    each val in javascripts
+      script(type='text/javascript', charset='UTF-8', src=val.filename, id=val.attr.id, data-app=val.attr['data-app'])
+    each val in modules
+      script(type='module', charset='UTF-8', src=val)
+  body
+    main.todo-shell
+      header.todo-header
+        h1 ToDo
+        p Einfache, erweiterbare Todo-Oberflaeche mit Live-Daten
+
+      .flash#flash
+
+      section.todo-grid
+        aside.card
+          h2 Listen
+          .stack
+            select#listSelect
+              option(value='') Liste auswaehlen...
+            .row
+              input#newListTitle(type='text', placeholder='Neue Liste')
+              button#addListBtn(type='button') +
+            button.ghost#reloadListsBtn(type='button') Listen neu laden
+
+        section.card
+          h2 Aufgaben
+          .row
+            input#newItemTitle(type='text', placeholder='Neue Aufgabe in aktiver Liste...')
+            button#addItemBtn(type='button') Hinzufuegen
+          p.meta#activeListMeta Keine Liste aktiv.
+          ul#items
+            li.empty Bitte zuerst eine Liste auswaehlen.
+
+      footer.todo-footer
+        small Route: /todo/ui
+
+    script.
+      (function () {
+        const flash = document.getElementById('flash');
+        const listSelect = document.getElementById('listSelect');
+        const newListTitle = document.getElementById('newListTitle');
+        const addListBtn = document.getElementById('addListBtn');
+        const reloadListsBtn = document.getElementById('reloadListsBtn');
+        const newItemTitle = document.getElementById('newItemTitle');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const items = document.getElementById('items');
+        const activeListMeta = document.getElementById('activeListMeta');
+
+        let currentListId = '';
+        let lists = [];
+
+        function setFlash(msg, isError) {
+          flash.textContent = msg || '';
+          flash.style.color = isError ? '#8a2e2e' : '#1c5f42';
+          if (msg) {
+            window.setTimeout(function () {
+              if (flash.textContent === msg) flash.textContent = '';
+            }, 2800);
+          }
+        }
+
+        async function api(url, options) {
+          const response = await fetch(url, Object.assign({
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+          }, options || {}));
+
+          const txt = await response.text();
+          try {
+            return JSON.parse(txt);
+          } catch (e) {
+            throw new Error('API liefert kein JSON: ' + txt);
+          }
+        }
+
+        function renderLists() {
+          const previous = currentListId;
+          listSelect.innerHTML = '<option value="">Liste auswaehlen...</option>';
+          lists.forEach(function (list) {
+            const option = document.createElement('option');
+            option.value = list.id;
+            option.textContent = list.title;
+            listSelect.appendChild(option);
+          });
+
+          if (previous && lists.some(function (l) { return l.id === previous; })) {
+            listSelect.value = previous;
+            currentListId = previous;
+          } else {
+            currentListId = listSelect.value;
+          }
+          updateListMeta();
+        }
+
+        function updateListMeta() {
+          if (!currentListId) {
+            activeListMeta.textContent = 'Keine Liste aktiv.';
+            return;
+          }
+          const list = lists.find(function (l) { return l.id === currentListId; });
+          activeListMeta.textContent = list ? ('Aktive Liste: ' + list.title) : 'Aktive Liste: unbekannt';
+        }
+
+        function renderItems(data) {
+          items.innerHTML = '';
+          if (!data || !data.length) {
+            const li = document.createElement('li');
+            li.className = 'empty';
+            li.textContent = 'Noch keine Aufgaben in dieser Liste.';
+            items.appendChild(li);
+            return;
+          }
+
+          data.forEach(function (item) {
+            const li = document.createElement('li');
+            li.className = 'item' + (item.status === 'done' ? ' done' : '');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = item.status === 'done';
+            checkbox.addEventListener('change', function () {
+              toggleItem(item.id, checkbox.checked);
+            });
+
+            const title = document.createElement('span');
+            title.className = 'title';
+            title.textContent = item.title;
+
+            const status = document.createElement('span');
+            status.className = 'status';
+            status.textContent = item.status;
+
+            li.appendChild(checkbox);
+            li.appendChild(title);
+            li.appendChild(status);
+            items.appendChild(li);
+          });
+        }
+
+        async function loadLists() {
+          try {
+            const res = await api('./lists');
+            if (!res.success) throw new Error(res.msg || 'Listen konnten nicht geladen werden');
+            lists = Array.isArray(res.data) ? res.data : [];
+            renderLists();
+            if (currentListId) await loadItems(currentListId);
+          } catch (e) {
+            setFlash(e.message, true);
+          }
+        }
+
+        async function loadItems(listId) {
+          if (!listId) {
+            renderItems([]);
+            return;
+          }
+          try {
+            const res = await api('./lists/' + encodeURIComponent(listId) + '/items');
+            if (!res.success) throw new Error(res.msg || 'Aufgaben konnten nicht geladen werden');
+            renderItems(Array.isArray(res.data) ? res.data : []);
+          } catch (e) {
+            setFlash(e.message, true);
+          }
+        }
+
+        async function createList() {
+          const title = (newListTitle.value || '').trim();
+          if (!title) return;
+          try {
+            const res = await api('./lists', {
+              method: 'POST',
+              body: JSON.stringify({ title: title })
+            });
+            if (!res.success) throw new Error(res.msg || 'Liste konnte nicht erstellt werden');
+            newListTitle.value = '';
+            await loadLists();
+            if (res.id) {
+              currentListId = res.id;
+              listSelect.value = res.id;
+              updateListMeta();
+              await loadItems(res.id);
+            }
+            setFlash('Liste angelegt.', false);
+          } catch (e) {
+            setFlash(e.message, true);
+          }
+        }
+
+        async function createItem() {
+          const title = (newItemTitle.value || '').trim();
+          if (!title) return;
+          if (!currentListId) {
+            setFlash('Bitte zuerst eine Liste auswaehlen.', true);
+            return;
+          }
+          try {
+            const res = await api('./lists/' + encodeURIComponent(currentListId) + '/items', {
+              method: 'POST',
+              body: JSON.stringify({ title: title })
+            });
+            if (!res.success) throw new Error(res.msg || 'Aufgabe konnte nicht erstellt werden');
+            newItemTitle.value = '';
+            await loadItems(currentListId);
+            setFlash('Aufgabe angelegt.', false);
+          } catch (e) {
+            setFlash(e.message, true);
+          }
+        }
+
+        async function toggleItem(id, isDone) {
+          try {
+            const res = await api('./items/' + encodeURIComponent(id) + '/update', {
+              method: 'POST',
+              body: JSON.stringify({ status: isDone ? 'done' : 'open' })
+            });
+            if (!res.success) throw new Error(res.msg || 'Status konnte nicht geaendert werden');
+            await loadItems(currentListId);
+          } catch (e) {
+            setFlash(e.message, true);
+          }
+        }
+
+        listSelect.addEventListener('change', function () {
+          currentListId = listSelect.value;
+          updateListMeta();
+          loadItems(currentListId);
+        });
+
+        addListBtn.addEventListener('click', createList);
+        reloadListsBtn.addEventListener('click', loadLists);
+        addItemBtn.addEventListener('click', createItem);
+
+        newListTitle.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') createList();
+        });
+        newItemTitle.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') createItem();
+        });
+
+        loadLists();
+      })();

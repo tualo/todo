@@ -6,7 +6,7 @@ use Tualo\Office\Basic\TualoApplication;
 use Tualo\Office\Basic\Route as R;
 use Tualo\Office\DS\DSTable;
 
-class ListRoute
+class ListRoute extends \Tualo\Office\Basic\RouteWrapper
 {
     const FieldsCreate = [
         '_dc'         => ['required' => false, 'type' => 'string', 'minlength' => 0,  'maxlength' => 10000],
@@ -32,11 +32,13 @@ class ListRoute
             values ('todo.list', '_default_', 1);
         */
         return 'todo.list';
+        // return 'basic';
     }
 
     public static function register(): void
     {
         // GET /todo/lists — alle aktiven Listen lesen
+
         R::add(
             '/todo/lists',
             function ($matches) {
