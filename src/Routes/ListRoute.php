@@ -79,7 +79,7 @@ class ListRoute extends \Tualo\Office\Basic\RouteWrapper
                     }
 
                     $db   = TualoApplication::get('session')->getDB();
-                    $id   = $db->singleValue('SELECT UUID()', [], 0);
+                    $id   = $db->singleValue('SELECT UUID() u', [], 'u');
                     $db->direct(
                         'INSERT INTO todo_list (id, tenant_id, title, description, color)
                          VALUES ({id}, {tenant_id}, {title}, {description}, {color})',

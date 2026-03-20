@@ -86,7 +86,7 @@ class ItemRoute extends \Tualo\Office\Basic\RouteWrapper
                     }
 
                     $db  = TualoApplication::get('session')->getDB();
-                    $id  = $db->singleValue('SELECT UUID()', [], 0);
+                    $id  = $db->singleValue('SELECT UUID() u', [], 'u');
                     $db->direct(
                         'INSERT INTO todo_item
                             (id, list_id, parent_item_id, title, notes, due_at, reminder_at, priority, sort_order)

@@ -72,7 +72,7 @@ class TagRoute extends \Tualo\Office\Basic\RouteWrapper
                     }
 
                     $db = TualoApplication::get('session')->getDB();
-                    $id = $db->singleValue('SELECT UUID()', [], 0);
+                    $id = $db->singleValue('SELECT UUID() u', [], 'u');
                     $db->direct(
                         'INSERT INTO todo_tag (id, name, color) VALUES ({id}, {name}, {color})',
                         [

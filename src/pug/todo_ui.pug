@@ -203,17 +203,36 @@ html(lang='de')
           }
         }
 
+        function firstDefined(obj, keys) {
+          for (let i = 0; i < keys.length; i++) {
+            const k = keys[i];
+            if (obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== null && obj[k] !== undefined) {
+              return obj[k];
+            }
+          }
+          return '';
+        }
+
+        function normalizeList(list) {
+          return {
+            id: String(firstDefined(list, ['id', 'ID', 'todo_list__id', 'todo_list.id'])).trim(),
+            title: String(firstDefined(list, ['title', 'TITLE', 'todo_list__title', 'todo_list.title']) || 'Ohne Titel').trim()
+          };
+        }
+
         function renderLists() {
           const previous = currentListId;
           listSelect.innerHTML = '<option value="">Liste auswaehlen...</option>';
           lists.forEach(function (list) {
+            const n = normalizeList(list);
+            if (!n.id) return;
             const option = document.createElement('option');
-            option.value = list.id;
-            option.textContent = list.title;
+            option.value = n.id;
+            option.textContent = n.title;
             listSelect.appendChild(option);
           });
 
-          if (previous && lists.some(function (l) { return l.id === previous; })) {
+          if (previous && lists.some(function (l) { return normalizeList(l).id === previous; })) {
             listSelect.value = previous;
             currentListId = previous;
           } else {
@@ -227,8 +246,18 @@ html(lang='de')
             activeListMeta.textContent = 'Keine Liste aktiv.';
             return;
           }
-          const list = lists.find(function (l) { return l.id === currentListId; });
+          const list = lists.map(normalizeList).find(function (l) { return l.id === currentListId; });
           activeListMeta.textContent = list ? ('Aktive Liste: ' + list.title) : 'Aktive Liste: unbekannt';
+        }
+
+        function getActiveListId() {
+            // console.log(listSelect, listSelect.value, currentListId);
+          const selected = (listSelect.value || '').trim();
+          if (selected) {
+            currentListId = selected;
+            return selected;
+          }
+          return (currentListId || '').trim();
         }
 
         function renderItems(data) {
@@ -319,18 +348,19 @@ html(lang='de')
         async function createItem() {
           const title = (newItemTitle.value || '').trim();
           if (!title) return;
-          if (!currentListId) {
+          const activeListId = getActiveListId();
+          if (!activeListId) {
             setFlash('Bitte zuerst eine Liste auswaehlen.', true);
             return;
           }
           try {
-            const res = await api('./lists/' + encodeURIComponent(currentListId) + '/items', {
+            const res = await api('./lists/' + encodeURIComponent(activeListId) + '/items', {
               method: 'POST',
               body: JSON.stringify({ title: title })
             });
             if (!res.success) throw new Error(res.msg || 'Aufgabe konnte nicht erstellt werden');
             newItemTitle.value = '';
-            await loadItems(currentListId);
+            await loadItems(activeListId);
             setFlash('Aufgabe angelegt.', false);
           } catch (e) {
             setFlash(e.message, true);
