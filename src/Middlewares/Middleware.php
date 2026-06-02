@@ -12,8 +12,8 @@ class Middleware implements IMiddleware
         TualoApplication::use('todo-js', function () {
             try {
 
-                TualoApplication::javascript('todo', './todo-js/todo.js', [], -5000000);
-                TualoApplication::stylesheet('./todo-js/todo.snow.css', 10001);
+                // TualoApplication::javascript('todo', './todo-js/todo.js', [], -5000000);
+                // TualoApplication::stylesheet('./todo-js/todo.snow.css', 10001);
             } catch (\Exception $e) {
                 TualoApplication::set('maintanceMode', 'on');
                 TualoApplication::addError($e->getMessage());
